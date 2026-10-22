@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>定期存款簿</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="存款簿">
+<meta name="application-name" content="定期存款簿">
+<meta name="theme-color" content="#0f1d2e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<style>
+:root{
+  --ink:#0f1d2e;
+  --ink-2:#16283d;
+  --paper:#f2ead9;
+  --paper-2:#e8ddc4;
+  --gold:#c9a35d;
+  --gold-dim:#8a723f;
+  --stamp:#a3402b;
+  --sage:#6f8f6b;
+  --line:#cbb98f;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; background:var(--ink); color:var(--paper); font-family:"Noto Sans TC","PingFang HK",sans-serif; min-height:100vh;}
+body{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 90px); overscroll-behavior-y:none; -webkit-text-size-adjust:100%;}
+.mono{font-family:"JetBrains Mono","Roboto Mono",monospace; font-variant-numeric:tabular-nums;}
+
+header.top{
+  padding:calc(env(safe-area-inset-top,0px) + 18px) 18px 16px;
+  background:linear-gradient(180deg,var(--ink-2),var(--ink) 90%);
+  border-bottom:1px solid #223347;
+  position:sticky; top:0; z-index:10;
+}
+header.top h1{
+  font-family:"Noto Serif TC",serif;
+  font-size:22px; letter-spacing:2px; margin:0 0 4px;
+  color:var(--gold);
+}
+header.top .sub{font-size:11px; color:#7f93a8; letter-spacing:1px;}
+
+.summary-strip{
+  display:flex; gap:10px; overflow-x:auto; margin-top:14px; padding-bottom:4px;
+  scrollbar-width:none;
+}
+.summary-strip::-webkit-scrollbar{display:none;}
+.sum-card{
+  flex:0 0 auto; min-width:120px;
+  background:var(--ink); border:1px solid #2a3d54; border-radius:8px;
+  padding:9px 12px;
+}
+.sum-card .cur{font-size:11px; color:var(--gold); letter-spacing:1px;}
+.sum-card .amt{font-size:15px; margin-top:3px;}
+.sum-card .int{font-size:10px; color:var(--sage); margin-top:2px;}
+
+main{padding:16px;}
+
+.toolbar{display:flex; gap:8px; margin-bottom:14px; align-items:center;}
+.toolbar select{
+  flex:1; background:var(--ink-2); color:var(--paper); border:1px solid #2a3d54;
+  border-radius:6px; padding:8px 10px; font-size:13px;
+}
+.icon-btn{
+  background:var(--ink-2); border:1px solid #2a3d54; color:var(--gold);
+  border-radius:6px; width:38px; height:38px; font-size:16px; flex:0 0 auto;
+}
+
+.ledger-group{margin-bottom:20px;}
+.ledger-group h2{
+  font-family:"Noto Serif TC",serif; font-size:13px; color:#89a0b8;
+  letter-spacing:2px; margin:0 0 8px 4px; font-weight:500;
+}
+
+.entry{
+  position:relative;
+  background:var(--paper); color:var(--ink);
+  border-radius:6px; margin-bottom:10px; overflow:hidden;
+  display:flex;
+}
+.entry .stub{
+  width:14px; background:repeating-linear-gradient(180deg, var(--ink) 0 3px, transparent 3px 7px);
+  background-color:var(--paper-2);
+  border-right:1px dashed var(--line);
+}
+.entry .body{flex:1; padding:12px 14px;}
+.entry .row1{display:flex; justify-content:space-between; align-items:baseline;}
+.entry .bank{font-family:"Noto Serif TC",serif; font-weight:700; font-size:15px;}
+.entry .status{font-size:10px; padding:2px 7px; border-radius:10px; letter-spacing:1px;}
+.entry .status.active{background:#dfe9dd; color:var(--sage);}
+.entry .status.due{background:#f1ddd6; color:var(--stamp);}
+.entry .row2{
+  display:flex; justify-content:space-between; margin-top:8px;
+  border-top:1px dotted var(--line); padding-top:8px;
+}
+.entry .principal{font-size:17px; font-weight:700;}
+.entry .meta{font-size:11px; color:#6b5f45; text-align:right; line-height:1.7;}
+.entry .interest-line{
+  margin-top:6px; font-size:12px; color:var(--stamp); display:flex; justify-content:space-between;
+}
+.entry .total-line{
+  margin-top:5px; padding-top:6px; border-top:1px dotted var(--line);
+  font-size:13px; color:var(--sage); font-weight:700; display:flex; justify-content:space-between;
+}
+
+.sync-status{margin-top:10px; font-size:12px; line-height:1.6; color:#89a0b8; word-break:break-all;}
+.sync-status.ok{color:var(--sage);}
+.sync-status.warn{color:var(--gold);}
+.sync-status.err{color:#e0836c;}
+#syncBadge{margin-left:8px; color:var(--sage); letter-spacing:0;}
+#syncBadge.warn{color:var(--gold);} #syncBadge.err{color:#e0836c;}
+.sync-btns .btn{padding:11px 0; font-size:13px;}
+.field label.chart-toggle-row{display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:0; margin:12px 0 0;}
+.field label.chart-toggle-row input{width:18px; height:18px; padding:0; margin:0; flex:0 0 auto; accent-color:var(--gold);}
+
+/* 已到期：淺灰色，與未到期容易區分 */
+.entry.matured{background:#dcdcdc; color:#6f6f6f;}
+.entry.matured .stub{background-color:#c9c9c9; border-right-color:#b5b5b5;
+  background-image:repeating-linear-gradient(180deg,#8d8d8d 0 3px,transparent 3px 7px);}
+.entry.matured .bank,.entry.matured .principal{color:#707070;}
+.entry.matured .row2,.entry.matured .total-line{border-top-color:#bdbdbd;}
+.entry.matured .meta{color:#8a8a8a;}
+.entry.matured .interest-line,.entry.matured .total-line{color:#7d7d7d;}
+.entry.matured .status.due{background:#c4c4c4; color:#5f5f5f;}
+
+.fab{
+  position:fixed; right:20px; bottom:calc(env(safe-area-inset-bottom,0px) + 24px); width:56px; height:56px; border-radius:50%;
+  background:var(--gold); color:var(--ink); border:none; font-size:28px; font-weight:300;
+  box-shadow:0 4px 14px rgba(0,0,0,.4); z-index:20;
+}
+
+.empty{text-align:center; color:#5f7d8a; opacity:.6; padding:60px 20px; font-size:13px;}
+
+.tabs{display:flex; gap:6px; margin-bottom:14px; background:var(--ink-2); padding:4px; border-radius:8px; border:1px solid #2a3d54;}
+.tab-btn{flex:1; background:transparent; border:none; color:#89a0b8; font-size:13px; padding:9px 0; border-radius:6px; font-weight:500;}
+.tab-btn.sel{background:var(--gold); color:var(--ink); font-weight:700;}
+
+.year-nav{display:flex; align-items:center; justify-content:center; gap:20px;}
+.year-nav button{background:var(--ink-2); border:1px solid #2a3d54; color:var(--gold); width:34px; height:34px; border-radius:6px; font-size:18px;}
+.year-nav .year-label{font-family:"Noto Serif TC",serif; font-size:18px; color:var(--gold); letter-spacing:2px; min-width:70px; text-align:center;}
+.range-note{text-align:center; font-size:11px; color:#5f7d8a; margin-top:4px; letter-spacing:1px;}
+
+.range-mode-toggle{display:flex; gap:8px; margin-top:12px;}
+.range-mode-btn{
+  flex:1; background:var(--ink-2); border:1px solid #2a3d54; color:#89a0b8;
+  border-radius:8px; padding:8px 6px; font-size:12px; line-height:1.6; text-align:center;
+}
+.range-mode-btn span{font-size:10px; color:#6b7f92; font-family:"JetBrains Mono",monospace;}
+.range-mode-btn.sel{background:var(--sage); color:var(--ink); border-color:var(--sage);}
+.range-mode-btn.sel span{color:var(--ink); opacity:.8;}
+
+.chart-toggle-row{
+  display:flex; align-items:center; gap:8px; margin:14px 2px 0; font-size:12px; color:#89a0b8;
+}
+.chart-toggle-row input{accent-color:var(--gold); width:16px; height:16px;}
+
+.month-card{
+  background:var(--paper); color:var(--ink); border-radius:6px; margin-bottom:8px;
+  display:flex; overflow:hidden;
+}
+.month-card .stub{width:14px; background:repeating-linear-gradient(180deg, var(--ink) 0 3px, transparent 3px 7px); background-color:var(--paper-2); border-right:1px dashed var(--line);}
+.month-card .body{flex:1; padding:11px 14px;}
+.month-card .mrow1{display:flex; justify-content:space-between; align-items:baseline;}
+.month-card .mname{font-family:"Noto Serif TC",serif; font-weight:700; font-size:14px;}
+.month-card .mcount{font-size:10px; color:#6b5f45;}
+.month-card .cur-lines{margin-top:6px; border-top:1px dotted var(--line); padding-top:6px;}
+.month-card .cur-line{display:flex; justify-content:space-between; font-size:13px; padding:2px 0;}
+.month-card .cur-line .c{color:#6b5f45; font-size:11px;}
+.month-card .cur-line .v{color:var(--stamp); font-weight:700;}
+.month-card.empty-month{opacity:.45;}
+.month-card.empty-month .body{padding:9px 14px;}
+
+.basis-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--ink-2); padding:4px; border-radius:8px; border:1px solid #2a3d54;}
+.basis-btn{flex:1; background:transparent; border:none; color:#89a0b8; font-size:12px; padding:8px 0; border-radius:6px; font-weight:500;}
+.basis-btn.sel{background:var(--sage); color:var(--ink); font-weight:700;}
+
+.chart-card{
+  background:var(--ink-2); border:1px solid #2a3d54; border-radius:10px; padding:14px 12px 8px; margin-top:16px;
+}
+.chart-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+.chart-title{font-family:"Noto Serif TC",serif; color:var(--gold); font-size:13px; letter-spacing:1px;}
+.chart-head select{background:var(--ink); color:var(--paper); border:1px solid #2a3d54; border-radius:6px; padding:5px 8px; font-size:12px;}
+.chart-bars{display:flex; align-items:flex-end; gap:5px; height:130px; padding:0 2px;}
+.chart-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+.chart-col .bar{width:100%; max-width:22px; background:linear-gradient(180deg,var(--gold),var(--gold-dim)); border-radius:3px 3px 0 0; min-height:2px;}
+.chart-col .bar.zero{background:#28394d;}
+.chart-col .mlabel{font-size:9px; color:#7f93a8; margin-top:6px;}
+
+/* Modal */
+.overlay{
+  position:fixed; inset:0; background:rgba(5,10,16,.7); z-index:30;
+  display:none; align-items:flex-end; justify-content:center;
+}
+.overlay.show{display:flex;}
+.sheet{
+  background:var(--ink-2); width:100%; max-width:480px; border-radius:16px 16px 0 0;
+  padding:20px 18px 30px; max-height:88vh; overflow-y:auto;
+  border-top:1px solid #2a3d54;
+}
+.sheet h3{font-family:"Noto Serif TC",serif; color:var(--gold); margin:0 0 16px; font-size:17px;}
+.field{margin-bottom:14px;}
+.field label{display:block; font-size:11px; color:#89a0b8; margin-bottom:5px; letter-spacing:1px;}
+.field select, .field input{
+  width:100%; background:var(--ink); color:var(--paper); border:1px solid #2a3d54;
+  border-radius:6px; padding:10px 12px; font-size:15px;
+}
+.term-row{display:flex; gap:8px;}
+.term-btn{
+  flex:1; padding:10px 0; text-align:center; border:1px solid #2a3d54; border-radius:6px;
+  font-size:13px; background:var(--ink); color:#89a0b8;
+}
+.term-btn.sel{background:var(--gold); color:var(--ink); border-color:var(--gold); font-weight:700;}
+.calc-box{
+  background:var(--ink); border:1px solid #2a3d54; border-radius:8px; padding:12px 14px;
+  margin:14px 0; display:flex; justify-content:space-between; align-items:center;
+}
+.calc-box .val{font-size:19px; color:var(--sage); font-weight:700;}
+.btn-row{display:flex; gap:10px; margin-top:8px;}
+.btn{flex:1; padding:13px 0; border-radius:8px; border:none; font-size:15px; font-weight:700;}
+.btn.save{background:var(--gold); color:var(--ink);}
+.btn.del{background:transparent; color:var(--stamp); border:1px solid var(--stamp);}
+.btn.cancel{background:transparent; color:#89a0b8; border:1px solid #2a3d54;}
+
+.tag-list{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;}
+.tag{
+  background:var(--ink); border:1px solid #2a3d54; border-radius:16px; padding:6px 10px 6px 12px;
+  font-size:12px; display:flex; align-items:center; gap:6px;
+}
+.tag button{background:none; border:none; color:var(--stamp); font-size:14px; padding:0;}
+.add-tag{display:flex; gap:8px;}
+.add-tag input{flex:1;}
+.add-tag button{background:var(--gold); color:var(--ink); border:none; border-radius:6px; padding:0 14px; font-weight:700;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>定 期 存 款 簿</h1>
+  <div class="sub">FIXED DEPOSIT LEDGER<span id="syncBadge"></span></div>
+  <div class="summary-strip" id="summaryStrip"></div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab-btn sel" id="tabList">存款清單</button>
+    <button class="tab-btn" id="tabSavings">活期收息</button>
+    <button class="tab-btn" id="tabIncome">每月利息收入</button>
+  </div>
+
+  <div id="savingsView" style="display:none;">
+    <div id="savingsTotals" class="summary-strip"></div>
+    <div id="savingsRoot" style="margin-top:14px;"></div>
+  </div>
+
+  <div id="listView">
+    <div class="toolbar">
+      <select id="sortSel">
+        <option value="maturity">按到期日排序</option>
+        <option value="newest">按最新做的排序</option>
+        <option value="bank">按銀行排序</option>
+        <option value="currency">按貨幣排序</option>
+        <option value="rate">按利率排序</option>
+        <option value="due">已到期</option>
+        <option value="active">未到期</option>
+      </select>
+      <button class="icon-btn" id="settingsBtn">⚙</button>
+    </div>
+    <div id="listRoot"></div>
+  </div>
+
+  <div id="incomeView" style="display:none;">
+    <div class="basis-toggle">
+      <button class="basis-btn sel" id="basisMaturity">依到期日月份</button>
+      <button class="basis-btn" id="basisStart">依開始日月份</button>
+    </div>
+    <div class="year-nav">
+      <button id="yearPrev">‹</button>
+      <div class="year-label" id="yearLabel"></div>
+      <button id="yearNext">›</button>
+    </div>
+    <div class="range-mode-toggle">
+      <button class="range-mode-btn sel" id="modeCalendar">曆年<br><span>1/1 － 12/30</span></button>
+      <button class="range-mode-btn" id="modeUkTax">英國稅務年度<br><span>4/6 － 次年4/5</span></button>
+    </div>
+    <div id="incomeTotals" class="summary-strip" style="margin-top:10px;"></div>
+
+    <label class="chart-toggle-row">
+      <input type="checkbox" id="chartToggle" checked>
+      <span>顯示每月現金流圖表</span>
+    </label>
+
+    <div class="chart-card" id="chartCard">
+      <div class="chart-head">
+        <span class="chart-title">每月現金流</span>
+        <select id="chartCurSel"></select>
+      </div>
+      <div class="chart-bars" id="chartBars"></div>
+    </div>
+
+    <div id="incomeRoot" style="margin-top:14px;"></div>
+  </div>
+</main>
+
+<button class="fab" id="addBtn">＋</button>
+
+<!-- Deposit edit sheet -->
+<div class="overlay" id="depOverlay">
+  <div class="sheet">
+    <h3 id="depTitle">新增定期</h3>
+    <div class="field">
+      <label>銀行</label>
+      <select id="fBank"></select>
+    </div>
+    <div class="field">
+      <label>貨幣</label>
+      <select id="fCurrency"></select>
+    </div>
+    <div class="field">
+      <label>年期（月數）</label>
+      <div class="term-row" id="termRow"></div>
+      <input type="number" id="fTermCustom" inputmode="numeric" placeholder="或自行輸入月數" style="margin-top:8px;">
+    </div>
+    <div class="field">
+      <label>本金</label>
+      <input type="number" id="fPrincipal" inputmode="decimal" placeholder="0.00">
+    </div>
+    <div class="field">
+      <label>年利率 (%)</label>
+      <input type="number" id="fRate" inputmode="decimal" step="0.01" placeholder="0.00">
+    </div>
+    <div class="field">
+      <label>開始日期</label>
+      <input type="date" id="fStart">
+    </div>
+    <div class="field">
+      <label>到期日期（自動計算，可自行修改）</label>
+      <input type="date" id="fMaturity">
+    </div>
+    <div class="field">
+      <label>備註 (選填)</label>
+      <input type="text" id="fNote" placeholder="例如：分行 / 戶口">
+    </div>
+    <div class="field">
+      <label>預計利息（自動計算，可自行修改）</label>
+      <input type="number" id="fInterest" inputmode="decimal" step="0.01" placeholder="0.00">
+    </div>
+    <div class="btn-row">
+      <button class="btn cancel" id="depCancel">取消</button>
+      <button class="btn del" id="depDelete" style="display:none;">刪除</button>
+      <button class="btn save" id="depSave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Savings (current account) edit sheet -->
+<div class="overlay" id="savOverlay">
+  <div class="sheet">
+    <h3 id="savTitle">新增活期戶口</h3>
+    <div class="field">
+      <label>銀行</label>
+      <select id="sBank"></select>
+    </div>
+    <div class="field">
+      <label>貨幣</label>
+      <select id="sCurrency"></select>
+    </div>
+    <div class="field">
+      <label>活期結餘</label>
+      <input type="number" id="sBalance" inputmode="decimal" placeholder="0.00">
+    </div>
+    <div class="field">
+      <label>年利率 (%)</label>
+      <input type="number" id="sRate" inputmode="decimal" step="0.01" placeholder="0.00">
+    </div>
+    <div class="field">
+      <label>每月利息（自動計算，可自行修改）</label>
+      <input type="number" id="sMonthly" inputmode="decimal" step="0.01" placeholder="0.00">
+    </div>
+    <div class="field">
+      <label>備註 (選填)</label>
+      <input type="text" id="sNote" placeholder="例如：戶口類型">
+    </div>
+    <div class="btn-row">
+      <button class="btn cancel" id="savCancel">取消</button>
+      <button class="btn del" id="savDelete" style="display:none;">刪除</button>
+      <button class="btn save" id="savSave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="overlay" id="setOverlay">
+  <div class="sheet">
+    <h3>編輯銀行 / 貨幣</h3>
+    <div class="field">
+      <label>銀行名單</label>
+      <div class="tag-list" id="bankTags"></div>
+      <div class="add-tag"><input id="newBank" placeholder="新增銀行名稱"><button id="addBankBtn">加</button></div>
+    </div>
+    <div class="field" style="margin-top:18px;">
+      <label>貨幣種類</label>
+      <div class="tag-list" id="curTags"></div>
+      <div class="add-tag"><input id="newCur" placeholder="例如 HKD" maxlength="6" style="text-transform:uppercase"><button id="addCurBtn">加</button></div>
+    </div>
+    <div class="field" style="margin-top:18px;">
+      <label>Google Drive 同步</label>
+      <input type="url" id="syncUrl" placeholder="Apps Script 網址（https://script.google.com/…/exec）" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input type="password" id="syncToken" placeholder="同步密碼（Code.gs 內的 TOKEN）" autocomplete="off" style="margin-top:8px;">
+      <div class="btn-row sync-btns">
+        <button class="btn cancel" id="syncTestBtn">測試連線</button>
+        <button class="btn cancel" id="syncPushBtn">上傳</button>
+        <button class="btn cancel" id="syncPullBtn">下載</button>
+      </div>
+      <label class="chart-toggle-row" style="margin-top:12px;">
+        <input type="checkbox" id="syncAuto">
+        <span>資料有改動時自動上傳</span>
+      </label>
+      <div class="sync-status" id="syncStatus">尚未設定同步</div>
+    </div>
+    <div class="field" style="margin-top:18px;">
+      <label>備份 / 轉移資料</label>
+      <div class="btn-row">
+        <button class="btn cancel" id="exportBtn">匯出 JSON</button>
+        <button class="btn cancel" id="importBtn">匯入 JSON</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <div class="range-note" style="margin-top:8px;">匯出後用 AirDrop／Files／iCloud Drive 傳到其他裝置，再喺嗰邊匯入</div>
+    </div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn save" id="setDone">完成</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY = 'fd_ledger_v1';
+const TERMS = [{m:3,l:'3個月'},{m:6,l:'半年'},{m:9,l:'9個月'},{m:12,l:'一年'},{m:24,l:'兩年'}];
+
+function defaultData(){
+  return {
+    banks: ['滙豐銀行','恒生銀行','中銀香港','渣打銀行','東亞銀行','大新銀行','創興銀行',
+      '上海商業銀行','集友銀行','招商永隆銀行','星展銀行','花旗銀行','工銀亞洲','建設銀行(亞洲)','南洋商業銀行'],
+    currencies: ['HKD','USD','CNY','EUR'],
+    deposits: []
+  };
+}
+
+let data = load();
+function ensureData(){
+  if(!Array.isArray(data.savings)) data.savings = [];
+}
+ensureData();
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  const d = defaultData();
+  save(d);
+  return d;
+}
+function save(d){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(d)); }catch(e){}
+}
+function persist(){ save(data); scheduleAutoPush(); }
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function fmt(n){
+  return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function addMonths(dateStr, months){
+  const d = new Date(dateStr+'T00:00:00');
+  d.setMonth(d.getMonth()+months);
+  return d;
+}
+function dstr(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function calcInterest(principal, rate, months){
+  return (Number(principal)||0) * (Number(rate)||0)/100 * (months/12);
+}
+
+function isMatured(dep){
+  const mat = getMaturity(dep);
+  return mat.getTime() < Date.now();
+}
+
+function getMaturity(dep){
+  if(dep.maturity) return new Date(dep.maturity+'T00:00:00');
+  return addMonths(dep.start, dep.term);
+}
+
+function getInterest(dep){
+  if(dep.interest !== undefined && dep.interest !== null && dep.interest !== ''){
+    return Number(dep.interest);
+  }
+  return calcInterest(dep.principal, dep.rate, dep.term);
+}
+
+// ---------- Rendering ----------
+function renderSummary(){
+  const root = document.getElementById('summaryStrip');
+  root.innerHTML='';
+  const {start:rangeStart, end:rangeEnd} = getRangeDates();
+  const periodLabel = data.rangeMode==='uktax' ? '稅務年度' : '本年度';
+  data.currencies.forEach(cur=>{
+    const curDeposits = data.deposits.filter(d=>d.currency===cur);
+
+    // 本金：只計目前未到期的定期，不受年度範圍影響，避免續存本金被重複計算
+    const activeList = curDeposits.filter(d=>!isMatured(d));
+    const total = activeList.reduce((s,d)=>s+Number(d.principal||0),0);
+
+    // 利息：跟隨已選的年度範圍及計算基準
+    const periodList = curDeposits.filter(d=>{
+      const refDate = incomeBasis==='maturity' ? getMaturity(d) : new Date(d.start+'T00:00:00');
+      return refDate >= rangeStart && refDate <= rangeEnd;
+    });
+    const interest = periodList.reduce((s,d)=>s+getInterest(d),0);
+
+    const card = document.createElement('div');
+    card.className='sum-card';
+    card.innerHTML = `<div class="cur">${cur}　現存本金</div>
+      <div class="amt mono">${fmt(total)}</div>
+      <div class="int mono">${periodLabel}利息 +${fmt(interest)}</div>`;
+    root.appendChild(card);
+  });
+}
+
+function renderList(){
+  const root = document.getElementById('listRoot');
+  root.innerHTML='';
+  if(data.deposits.length===0){
+    root.innerHTML = '<div class="empty">未有記錄　點右下角 ＋ 新增定期</div>';
+    return;
+  }
+  const sortBy = document.getElementById('sortSel').value;
+  let items = [...data.deposits];
+
+  if(sortBy==='due') items = items.filter(d=>isMatured(d));
+  else if(sortBy==='active') items = items.filter(d=>!isMatured(d));
+
+  if(items.length===0){
+    root.innerHTML = '<div class="empty">沒有符合條件的記錄</div>';
+    return;
+  }
+
+  const cmp = (a,b)=>{
+    if(sortBy==='newest'){
+      if(a.start!==b.start) return a.start < b.start ? 1 : -1;
+      return String(b.id).localeCompare(String(a.id));
+    }
+    if(sortBy==='bank') return a.bank.localeCompare(b.bank,'zh-Hant');
+    if(sortBy==='currency') return a.currency.localeCompare(b.currency);
+    if(sortBy==='rate') return b.rate-a.rate;
+    return getMaturity(a)-getMaturity(b); // maturity / due / active
+  };
+
+  // 已到期與存款中分開顯示
+  const activeItems = items.filter(d=>!isMatured(d)).sort(cmp);
+  const dueItems = items.filter(d=>isMatured(d)).sort(cmp);
+
+  [{title:'存款中', list:activeItems},{title:'已到期', list:dueItems}].forEach(g=>{
+    if(g.list.length===0) return;
+    const group = document.createElement('div');
+    group.className='ledger-group';
+    const h = document.createElement('h2');
+    h.textContent = `${g.title}　${g.list.length} 筆`;
+    group.appendChild(h);
+    g.list.forEach(dep=>group.appendChild(buildEntry(dep)));
+    root.appendChild(group);
+  });
+}
+
+function buildEntry(dep){
+  {
+    const mat = getMaturity(dep);
+    const matured = mat.getTime() < Date.now();
+    const interest = getInterest(dep);
+    const termLabel = TERMS.find(t=>t.m===dep.term)?.l || (dep.term+'個月');
+
+    const el = document.createElement('div');
+    el.className = 'entry' + (matured ? ' matured' : '');
+    el.innerHTML = `
+      <div class="stub"></div>
+      <div class="body">
+        <div class="row1">
+          <span class="bank">${esc(dep.bank)}</span>
+          <span class="status ${matured?'due':'active'}">${matured?'已到期':'存款中'}</span>
+        </div>
+        <div class="row2">
+          <span class="principal mono">${dep.currency} ${fmt(dep.principal)}</span>
+          <span class="meta">${termLabel}　年利率 ${dep.rate}%<br>起存：${dep.start}<br>到期：${dstr(mat)}</span>
+        </div>
+        <div class="interest-line">
+          <span>${dep.note?esc(dep.note):'&nbsp;'}</span>
+          <span class="mono">利息 +${dep.currency} ${fmt(interest)}</span>
+        </div>
+        <div class="total-line">
+          <span>本利總和</span>
+          <span class="mono">${dep.currency} ${fmt(Number(dep.principal)+interest)}</span>
+        </div>
+      </div>`;
+    el.addEventListener('click',()=>openDepositSheet(dep.id));
+    return el;
+  }
+}
+
+function renderAll(){
+  renderSummary();
+  renderList();
+  renderSavings();
+}
+
+// ---------- Savings (活期收息) ----------
+function calcMonthly(balance, rate){
+  return (Number(balance)||0) * (Number(rate)||0) / 100 / 12;
+}
+function getMonthly(s){
+  if(s.monthly !== undefined && s.monthly !== null && s.monthly !== '') return Number(s.monthly);
+  return calcMonthly(s.balance, s.rate);
+}
+
+function renderSavings(){
+  const totalsRoot = document.getElementById('savingsTotals');
+  const root = document.getElementById('savingsRoot');
+  totalsRoot.innerHTML = '';
+  root.innerHTML = '';
+
+  if(data.savings.length===0){
+    root.innerHTML = '<div class="empty">未有活期戶口　點右下角 ＋ 新增</div>';
+    return;
+  }
+
+  data.currencies.forEach(cur=>{
+    const list = data.savings.filter(s=>s.currency===cur);
+    if(list.length===0) return;
+    const bal = list.reduce((a,s)=>a+Number(s.balance||0),0);
+    const monthly = list.reduce((a,s)=>a+getMonthly(s),0);
+    const card = document.createElement('div');
+    card.className='sum-card';
+    card.innerHTML = `<div class="cur">${esc(cur)}　活期結餘</div>
+      <div class="amt mono">${fmt(bal)}</div>
+      <div class="int mono">每月利息 +${fmt(monthly)}</div>
+      <div class="int mono">全年約 +${fmt(monthly*12)}</div>`;
+    totalsRoot.appendChild(card);
+  });
+
+  const items = [...data.savings].sort((a,b)=>a.bank.localeCompare(b.bank,'zh-Hant') || a.currency.localeCompare(b.currency));
+  items.forEach(s=>{
+    const monthly = getMonthly(s);
+    const el = document.createElement('div');
+    el.className='entry';
+    el.innerHTML = `
+      <div class="stub"></div>
+      <div class="body">
+        <div class="row1">
+          <span class="bank">${esc(s.bank)}</span>
+          <span class="status active">活期</span>
+        </div>
+        <div class="row2">
+          <span class="principal mono">${esc(s.currency)} ${fmt(s.balance)}</span>
+          <span class="meta">年利率 ${esc(s.rate)}%</span>
+        </div>
+        <div class="interest-line">
+          <span>${s.note?esc(s.note):'&nbsp;'}</span>
+          <span class="mono">每月利息 +${esc(s.currency)} ${fmt(monthly)}</span>
+        </div>
+        <div class="total-line">
+          <span>全年利息（約）</span>
+          <span class="mono">${esc(s.currency)} ${fmt(monthly*12)}</span>
+        </div>
+      </div>`;
+    el.addEventListener('click',()=>openSavingsSheet(s.id));
+    root.appendChild(el);
+  });
+}
+
+let editingSavId = null;
+let monthlyManuallyEdited = false;
+
+function fillSavingsSelects(){
+  document.getElementById('sBank').innerHTML = data.banks.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
+  document.getElementById('sCurrency').innerHTML = data.currencies.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+function updateMonthlyDefault(){
+  if(monthlyManuallyEdited) return;
+  const v = calcMonthly(document.getElementById('sBalance').value, document.getElementById('sRate').value);
+  document.getElementById('sMonthly').value = v.toFixed(2);
+}
+
+function openSavingsSheet(id){
+  fillSavingsSelects();
+  editingSavId = id || null;
+  const s = id ? data.savings.find(x=>x.id===id) : null;
+
+  document.getElementById('savTitle').textContent = s ? '編輯活期戶口' : '新增活期戶口';
+  document.getElementById('savDelete').style.display = s ? 'block' : 'none';
+
+  document.getElementById('sBank').value = s ? s.bank : data.banks[0];
+  document.getElementById('sCurrency').value = s ? s.currency : data.currencies[0];
+  document.getElementById('sBalance').value = s ? s.balance : '';
+  document.getElementById('sRate').value = s ? s.rate : '';
+  document.getElementById('sNote').value = s ? (s.note||'') : '';
+
+  const defaultM = calcMonthly(s?s.balance:0, s?s.rate:0);
+  const storedM = s && s.monthly !== undefined && s.monthly !== null && s.monthly !== '' ? Number(s.monthly) : null;
+  monthlyManuallyEdited = !!(storedM !== null && Math.abs(storedM-defaultM) > 0.005);
+  document.getElementById('sMonthly').value = (storedM !== null ? storedM : defaultM).toFixed(2);
+
+  document.getElementById('savOverlay').classList.add('show');
+}
+
+function closeSavingsSheet(){
+  document.getElementById('savOverlay').classList.remove('show');
+}
+
+document.getElementById('savCancel').addEventListener('click', closeSavingsSheet);
+document.getElementById('sBalance').addEventListener('input', updateMonthlyDefault);
+document.getElementById('sRate').addEventListener('input', updateMonthlyDefault);
+document.getElementById('sMonthly').addEventListener('input', ()=>{ monthlyManuallyEdited = true; });
+
+document.getElementById('savSave').addEventListener('click',()=>{
+  const bank = document.getElementById('sBank').value;
+  const currency = document.getElementById('sCurrency').value;
+  const balance = parseFloat(document.getElementById('sBalance').value)||0;
+  const rate = parseFloat(document.getElementById('sRate').value)||0;
+  const note = document.getElementById('sNote').value.trim();
+  const m = parseFloat(document.getElementById('sMonthly').value);
+  const monthly = isNaN(m) ? calcMonthly(balance, rate) : m;
+
+  if(balance<=0){ alert('請輸入活期結餘'); return; }
+
+  const payload = {bank,currency,balance,rate,monthly,note};
+  if(editingSavId){
+    Object.assign(data.savings.find(x=>x.id===editingSavId), payload);
+  }else{
+    data.savings.push({id:uid(),...payload});
+  }
+  persist();
+  closeSavingsSheet();
+  renderSavings();
+});
+
+document.getElementById('savDelete').addEventListener('click',()=>{
+  if(!editingSavId) return;
+  if(confirm('確定刪除此活期戶口？')){
+    data.savings = data.savings.filter(x=>x.id!==editingSavId);
+    persist();
+    closeSavingsSheet();
+    renderSavings();
+  }
+});
+
+// ---------- Deposit sheet ----------
+let editingId = null;
+let selectedTerm = 3;
+let maturityManuallyEdited = false;
+let interestManuallyEdited = false;
+
+function fillSelects(){
+  const bankSel = document.getElementById('fBank');
+  bankSel.innerHTML = data.banks.map(b=>`<option value="${b}">${b}</option>`).join('');
+  const curSel = document.getElementById('fCurrency');
+  curSel.innerHTML = data.currencies.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const termRow = document.getElementById('termRow');
+  termRow.innerHTML = TERMS.map(t=>`<div class="term-btn" data-m="${t.m}">${t.l}</div>`).join('');
+  termRow.querySelectorAll('.term-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      selectedTerm = Number(btn.dataset.m);
+      document.getElementById('fTermCustom').value = selectedTerm;
+      termRow.querySelectorAll('.term-btn').forEach(b=>b.classList.toggle('sel', b===btn));
+      updateMaturityDefault();
+      updateCalc();
+    });
+  });
+}
+
+function highlightTermButtons(){
+  document.querySelectorAll('.term-btn').forEach(b=>b.classList.toggle('sel', Number(b.dataset.m)===selectedTerm));
+}
+
+document.getElementById('fTermCustom').addEventListener('input',(e)=>{
+  const v = parseInt(e.target.value);
+  selectedTerm = (v && v>0) ? v : 0;
+  highlightTermButtons();
+  updateMaturityDefault();
+  updateCalc();
+});
+
+function updateMaturityDefault(){
+  if(maturityManuallyEdited) return;
+  const start = document.getElementById('fStart').value;
+  if(!start || !selectedTerm) return;
+  document.getElementById('fMaturity').value = dstr(addMonths(start, selectedTerm));
+}
+
+function updateCalc(){
+  if(interestManuallyEdited) return;
+  const p = document.getElementById('fPrincipal').value;
+  const r = document.getElementById('fRate').value;
+  const val = calcInterest(p,r,selectedTerm);
+  document.getElementById('fInterest').value = val.toFixed(2);
+}
+
+function openDepositSheet(id){
+  fillSelects();
+  editingId = id || null;
+  const dep = id ? data.deposits.find(d=>d.id===id) : null;
+
+  document.getElementById('depTitle').textContent = dep ? '編輯定期' : '新增定期';
+  document.getElementById('depDelete').style.display = dep ? 'block' : 'none';
+
+  document.getElementById('fBank').value = dep ? dep.bank : data.banks[0];
+  document.getElementById('fCurrency').value = dep ? dep.currency : data.currencies[0];
+  document.getElementById('fPrincipal').value = dep ? dep.principal : '';
+  document.getElementById('fRate').value = dep ? dep.rate : '';
+  document.getElementById('fStart').value = dep ? dep.start : dstr(new Date());
+  document.getElementById('fNote').value = dep ? (dep.note||'') : '';
+
+  selectedTerm = dep ? dep.term : 3;
+  document.getElementById('fTermCustom').value = selectedTerm;
+  highlightTermButtons();
+
+  const start = document.getElementById('fStart').value;
+  const defaultMat = dstr(addMonths(start, selectedTerm));
+  const defaultInt = calcInterest(dep?dep.principal:0, dep?dep.rate:0, selectedTerm);
+
+  maturityManuallyEdited = !!(dep && dep.maturity && dep.maturity !== defaultMat);
+  document.getElementById('fMaturity').value = (dep && dep.maturity) ? dep.maturity : defaultMat;
+
+  const depInterest = dep && dep.interest !== undefined && dep.interest !== null && dep.interest !== '' ? Number(dep.interest) : null;
+  interestManuallyEdited = !!(depInterest !== null && Math.abs(depInterest-defaultInt) > 0.005);
+  document.getElementById('fInterest').value = (depInterest !== null ? depInterest : defaultInt).toFixed(2);
+
+  document.getElementById('depOverlay').classList.add('show');
+}
+
+function closeDepositSheet(){
+  document.getElementById('depOverlay').classList.remove('show');
+}
+
+document.getElementById('depCancel').addEventListener('click', closeDepositSheet);
+document.getElementById('fPrincipal').addEventListener('input', updateCalc);
+document.getElementById('fRate').addEventListener('input', updateCalc);
+document.getElementById('fCurrency').addEventListener('change', updateCalc);
+document.getElementById('fStart').addEventListener('input', updateMaturityDefault);
+document.getElementById('fMaturity').addEventListener('input', ()=>{ maturityManuallyEdited = true; });
+document.getElementById('fInterest').addEventListener('input', ()=>{ interestManuallyEdited = true; });
+
+document.getElementById('depSave').addEventListener('click',()=>{
+  const bank = document.getElementById('fBank').value;
+  const currency = document.getElementById('fCurrency').value;
+  const principal = parseFloat(document.getElementById('fPrincipal').value)||0;
+  const rate = parseFloat(document.getElementById('fRate').value)||0;
+  const start = document.getElementById('fStart').value || dstr(new Date());
+  const note = document.getElementById('fNote').value.trim();
+  const maturity = document.getElementById('fMaturity').value || dstr(addMonths(start, selectedTerm||0));
+  const interest = parseFloat(document.getElementById('fInterest').value);
+  const term = selectedTerm || 0;
+
+  if(principal<=0){ alert('請輸入本金'); return; }
+  if(!term){ alert('請輸入年期月數'); return; }
+
+  const payload = {bank,currency,term,principal,rate,start,note,maturity,interest: isNaN(interest)?0:interest};
+
+  if(editingId){
+    const dep = data.deposits.find(d=>d.id===editingId);
+    Object.assign(dep,payload);
+  }else{
+    data.deposits.push({id:uid(),...payload});
+  }
+  persist();
+  closeDepositSheet();
+  renderAll();
+});
+
+document.getElementById('depDelete').addEventListener('click',()=>{
+  if(!editingId) return;
+  if(confirm('確定刪除此記錄？')){
+    data.deposits = data.deposits.filter(d=>d.id!==editingId);
+    persist();
+    closeDepositSheet();
+    renderAll();
+  }
+});
+
+document.getElementById('sortSel').addEventListener('change', renderList);
+
+// ---------- Settings sheet ----------
+function renderSettings(){
+  const bankTags = document.getElementById('bankTags');
+  bankTags.innerHTML = data.banks.map((b,i)=>
+    `<div class="tag">${b}<button data-i="${i}" class="rmBank">✕</button></div>`).join('');
+  bankTags.querySelectorAll('.rmBank').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i = Number(btn.dataset.i);
+      data.banks.splice(i,1);
+      persist(); renderSettings(); renderAll();
+    });
+  });
+
+  const curTags = document.getElementById('curTags');
+  curTags.innerHTML = data.currencies.map((c,i)=>
+    `<div class="tag">${c}<button data-i="${i}" class="rmCur">✕</button></div>`).join('');
+  curTags.querySelectorAll('.rmCur').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i = Number(btn.dataset.i);
+      data.currencies.splice(i,1);
+      persist(); renderSettings(); renderAll();
+    });
+  });
+}
+
+document.getElementById('settingsBtn').addEventListener('click',()=>{
+  renderSettings();
+  document.getElementById('setOverlay').classList.add('show');
+});
+document.getElementById('setDone').addEventListener('click',()=>{
+  document.getElementById('setOverlay').classList.remove('show');
+});
+document.getElementById('addBankBtn').addEventListener('click',()=>{
+  const v = document.getElementById('newBank').value.trim();
+  if(v && !data.banks.includes(v)){
+    data.banks.push(v);
+    document.getElementById('newBank').value='';
+    persist(); renderSettings();
+  }
+});
+document.getElementById('addCurBtn').addEventListener('click',()=>{
+  const v = document.getElementById('newCur').value.trim().toUpperCase();
+  if(v && !data.currencies.includes(v)){
+    data.currencies.push(v);
+    document.getElementById('newCur').value='';
+    persist(); renderSettings(); renderAll();
+  }
+});
+
+// ---------- Export / Import ----------
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = dstr(new Date());
+  a.href = url;
+  a.download = `定期存款簿備份_${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+});
+
+document.getElementById('importBtn').addEventListener('click',()=>{
+  document.getElementById('importFile').click();
+});
+
+document.getElementById('importFile').addEventListener('change',(e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const incoming = JSON.parse(ev.target.result);
+      if(!incoming || !Array.isArray(incoming.deposits) || !Array.isArray(incoming.banks) || !Array.isArray(incoming.currencies)){
+        alert('檔案格式不正確');
+        return;
+      }
+      const mode = confirm('按「確定」= 覆蓋現有資料\n按「取消」= 合併到現有資料（保留兩邊記錄）');
+      if(mode){
+        data = incoming;
+        ensureData();
+      }else{
+        incoming.banks.forEach(b=>{ if(!data.banks.includes(b)) data.banks.push(b); });
+        incoming.currencies.forEach(c=>{ if(!data.currencies.includes(c)) data.currencies.push(c); });
+        const existingIds = new Set(data.deposits.map(d=>d.id));
+        incoming.deposits.forEach(d=>{
+          if(existingIds.has(d.id)) d = {...d, id: uid()};
+          data.deposits.push(d);
+        });
+        const existingSavIds = new Set(data.savings.map(s=>s.id));
+        (Array.isArray(incoming.savings) ? incoming.savings : []).forEach(s=>{
+          if(existingSavIds.has(s.id)) s = {...s, id: uid()};
+          data.savings.push(s);
+        });
+      }
+      if(!data.rangeMode) data.rangeMode = 'calendar';
+      persist();
+      renderSettings();
+      renderAll();
+      alert('匯入完成');
+    }catch(err){
+      alert('讀取檔案失敗，請確認係正確的匯出檔案');
+    }finally{
+      e.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+});
+
+// ---------- Tabs ----------
+const tabList = document.getElementById('tabList');
+const tabSavings = document.getElementById('tabSavings');
+const tabIncome = document.getElementById('tabIncome');
+const listView = document.getElementById('listView');
+const savingsView = document.getElementById('savingsView');
+const incomeView = document.getElementById('incomeView');
+let activeTab = 'list';
+
+function showTab(name){
+  activeTab = name;
+  tabList.classList.toggle('sel', name==='list');
+  tabSavings.classList.toggle('sel', name==='savings');
+  tabIncome.classList.toggle('sel', name==='income');
+  listView.style.display = name==='list' ? 'block' : 'none';
+  savingsView.style.display = name==='savings' ? 'block' : 'none';
+  incomeView.style.display = name==='income' ? 'block' : 'none';
+  if(name==='savings') renderSavings();
+  if(name==='income') renderIncome();
+}
+tabList.addEventListener('click',()=>showTab('list'));
+tabSavings.addEventListener('click',()=>showTab('savings'));
+tabIncome.addEventListener('click',()=>showTab('income'));
+
+// ＋ 按鈕：按目前分頁開啟對應表單
+document.getElementById('addBtn').addEventListener('click',()=>{
+  if(activeTab==='savings') openSavingsSheet(null);
+  else openDepositSheet(null);
+});
+
+// ---------- Monthly interest income ----------
+const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+let incomeYear = new Date().getFullYear();
+let incomeBasis = 'maturity'; // 'maturity' | 'start'
+let chartCurrency = null;
+if(!data.rangeMode) data.rangeMode = 'calendar'; // 'calendar' | 'uktax'
+
+function getMonthOrder(){
+  // returns array of month indices (0=Jan) in the display order for the current rangeMode
+  if(data.rangeMode==='uktax') return [3,4,5,6,7,8,9,10,11,0,1,2];
+  return [0,1,2,3,4,5,6,7,8,9,10,11];
+}
+
+function getRangeDates(){
+  if(data.rangeMode==='uktax'){
+    return {
+      start: new Date(`${incomeYear}-04-06T00:00:00`),
+      end: new Date(`${incomeYear+1}-04-05T23:59:59`)
+    };
+  }
+  return {
+    start: new Date(`${incomeYear}-01-01T00:00:00`),
+    end: new Date(`${incomeYear}-12-30T23:59:59`)
+  };
+}
+
+document.getElementById('yearPrev').addEventListener('click',()=>{ incomeYear--; renderIncome(); });
+document.getElementById('yearNext').addEventListener('click',()=>{ incomeYear++; renderIncome(); });
+
+const modeCalendarBtn = document.getElementById('modeCalendar');
+const modeUkTaxBtn = document.getElementById('modeUkTax');
+modeCalendarBtn.addEventListener('click',()=>{
+  data.rangeMode = 'calendar';
+  persist();
+  modeCalendarBtn.classList.add('sel'); modeUkTaxBtn.classList.remove('sel');
+  renderIncome();
+});
+modeUkTaxBtn.addEventListener('click',()=>{
+  data.rangeMode = 'uktax';
+  persist();
+  modeUkTaxBtn.classList.add('sel'); modeCalendarBtn.classList.remove('sel');
+  renderIncome();
+});
+
+document.getElementById('chartToggle').addEventListener('change',(e)=>{
+  document.getElementById('chartCard').style.display = e.target.checked ? 'block' : 'none';
+});
+
+const basisMaturityBtn = document.getElementById('basisMaturity');
+const basisStartBtn = document.getElementById('basisStart');
+basisMaturityBtn.addEventListener('click',()=>{
+  incomeBasis='maturity';
+  basisMaturityBtn.classList.add('sel'); basisStartBtn.classList.remove('sel');
+  renderIncome();
+});
+basisStartBtn.addEventListener('click',()=>{
+  incomeBasis='start';
+  basisStartBtn.classList.add('sel'); basisMaturityBtn.classList.remove('sel');
+  renderIncome();
+});
+
+document.getElementById('chartCurSel').addEventListener('change',(e)=>{
+  chartCurrency = e.target.value;
+  renderChart(window.__lastBuckets || []);
+});
+
+function computeBuckets(){
+  const {start:rangeStart, end:rangeEnd} = getRangeDates();
+  const buckets = Array.from({length:12},()=>({}));
+
+  data.deposits.forEach(dep=>{
+    const refDate = incomeBasis==='maturity' ? getMaturity(dep) : new Date(dep.start+'T00:00:00');
+    if(refDate < rangeStart || refDate > rangeEnd) return;
+    const mIdx = refDate.getMonth();
+    const interest = getInterest(dep);
+    if(!buckets[mIdx][dep.currency]) buckets[mIdx][dep.currency] = {sum:0,count:0};
+    buckets[mIdx][dep.currency].sum += interest;
+    buckets[mIdx][dep.currency].count += 1;
+  });
+  return buckets;
+}
+
+function renderChart(buckets){
+  const sel = document.getElementById('chartCurSel');
+  sel.innerHTML = data.currencies.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(!chartCurrency || !data.currencies.includes(chartCurrency)) chartCurrency = data.currencies[0];
+  sel.value = chartCurrency;
+
+  const order = getMonthOrder();
+  const values = order.map(i => (buckets[i][chartCurrency] ? buckets[i][chartCurrency].sum : 0));
+  const max = Math.max(...values, 0.01);
+
+  const root = document.getElementById('chartBars');
+  root.innerHTML = '';
+  order.forEach((mIdx,pos)=>{
+    const v = values[pos];
+    const pct = Math.max((v/max)*100, v>0?4:0);
+    const col = document.createElement('div');
+    col.className='chart-col';
+    col.innerHTML = `<div class="bar ${v<=0?'zero':''}" style="height:${pct}%" title="${MONTH_NAMES[mIdx]}: ${fmt(v)}"></div>
+      <div class="mlabel">${MONTH_NAMES[mIdx].replace('月','')}</div>`;
+    root.appendChild(col);
+  });
+}
+
+function renderIncome(){
+  renderSummary();
+  modeCalendarBtn.classList.toggle('sel', data.rangeMode==='calendar');
+  modeUkTaxBtn.classList.toggle('sel', data.rangeMode==='uktax');
+
+  document.getElementById('yearLabel').textContent = data.rangeMode==='uktax'
+    ? `${incomeYear}/${incomeYear+1}`
+    : `${incomeYear} 年`;
+
+  const buckets = computeBuckets();
+  window.__lastBuckets = buckets;
+
+  const totals = {};
+  buckets.forEach(b=>{
+    Object.entries(b).forEach(([cur,v])=>{
+      if(!totals[cur]) totals[cur]=0;
+      totals[cur]+=v.sum;
+    });
+  });
+
+  const totalsRoot = document.getElementById('incomeTotals');
+  const curKeys = Object.keys(totals);
+  if(curKeys.length===0){
+    totalsRoot.innerHTML = '<div class="sum-card"><div class="cur">全年利息</div><div class="amt mono">0.00</div></div>';
+  }else{
+    totalsRoot.innerHTML = curKeys.map(cur=>`
+      <div class="sum-card">
+        <div class="cur">${cur} 全年利息</div>
+        <div class="amt mono">+${fmt(totals[cur])}</div>
+      </div>`).join('');
+  }
+
+  renderChart(buckets);
+
+  const label = incomeBasis==='maturity' ? '到期' : '開始';
+  const order = getMonthOrder();
+  const root = document.getElementById('incomeRoot');
+  root.innerHTML = '';
+  order.forEach(i=>{
+    const b = buckets[i];
+    const curKeys = Object.keys(b);
+    const card = document.createElement('div');
+    if(curKeys.length===0){
+      card.className='month-card empty-month';
+      card.innerHTML = `<div class="stub"></div><div class="body">
+        <div class="mrow1"><span class="mname">${MONTH_NAMES[i]}</span><span class="mcount">沒有${label}的定期</span></div>
+      </div>`;
+    }else{
+      const totalCount = curKeys.reduce((s,c)=>s+b[c].count,0);
+      card.className='month-card';
+      card.innerHTML = `<div class="stub"></div><div class="body">
+        <div class="mrow1"><span class="mname">${MONTH_NAMES[i]}</span><span class="mcount">${totalCount} 筆${label}</span></div>
+        <div class="cur-lines">
+          ${curKeys.map(cur=>`<div class="cur-line"><span class="c">${cur} 利息收入</span><span class="v mono">+${fmt(b[cur].sum)}</span></div>`).join('')}
+        </div>
+      </div>`;
+    }
+    root.appendChild(card);
+  });
+}
+
+// Close overlays on background tap
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('show'); });
+});
+
+renderAll();
+
+// ---------- Google Drive 同步（Apps Script） ----------
+// 設定另存在 fd_sync_cfg，不會放進匯出的備份檔，密碼不會外洩
+const SYNC_KEY = 'fd_sync_cfg';
+const SYNC_DEFAULT = {url:'', token:'', auto:false, lastSavedAt:null, lastSyncTime:null};
+let pendingPush = false;
+let autoTimer = null;
+let syncBusy = false;
+
+function getSyncCfg(){
+  try{ return Object.assign({}, SYNC_DEFAULT, JSON.parse(localStorage.getItem(SYNC_KEY)||'{}')); }
+  catch(e){ return Object.assign({}, SYNC_DEFAULT); }
+}
+function setSyncCfg(patch){
+  const c = Object.assign(getSyncCfg(), patch);
+  try{ localStorage.setItem(SYNC_KEY, JSON.stringify(c)); }catch(e){}
+  return c;
+}
+function syncConfigured(){
+  const c = getSyncCfg();
+  return /^https:\/\/script\.google\.com\//.test(c.url) && !!c.token;
+}
+function timeLabel(ms){
+  const d = new Date(ms);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function setSyncStatus(text, kind){
+  const st = document.getElementById('syncStatus');
+  st.textContent = text;
+  st.className = 'sync-status' + (kind && kind!=='busy' ? ' '+kind : '');
+  const badge = document.getElementById('syncBadge');
+  if(!syncConfigured()){ badge.textContent=''; return; }
+  badge.className = kind==='warn'?'warn':kind==='err'?'err':'';
+  if(kind==='busy') badge.textContent = ' · ☁ 同步中…';
+  else if(kind==='ok'){ const c=getSyncCfg(); badge.textContent = ' · ☁ 已同步 '+(c.lastSyncTime?timeLabel(c.lastSyncTime):''); }
+  else if(kind==='warn') badge.textContent = ' · ☁ 需處理';
+  else if(kind==='err') badge.textContent = ' · ☁ 未同步';
+}
+
+async function gas(action, extra){
+  const cfg = getSyncCfg();
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), 30000);
+  try{
+    // 不設 Content-Type（預設 text/plain），可避開瀏覽器的 CORS 預檢，Apps Script 才收得到
+    const res = await fetch(cfg.url, {
+      method:'POST', redirect:'follow', signal:ctrl.signal,
+      body: JSON.stringify(Object.assign({action, token:cfg.token}, extra||{}))
+    });
+    const text = await res.text();
+    try{ return JSON.parse(text); }
+    catch(e){ throw new Error('伺服器回應不正確，請確認網址是「部署為網頁應用程式」的 /exec 網址，且存取權限為「任何人」'); }
+  }finally{ clearTimeout(timer); }
+}
+function errText(err){
+  if(err && err.name==='AbortError') return '連線逾時';
+  if(!navigator.onLine) return '目前離線';
+  return (err && err.message) ? err.message : String(err);
+}
+
+async function testSync(){
+  if(!syncConfigured()){ setSyncStatus('請先填寫正確的 Apps Script 網址及密碼','warn'); return; }
+  setSyncStatus('測試連線中…','busy');
+  try{
+    const r = await gas('ping');
+    if(!r.ok) throw new Error(r.error||'未知錯誤');
+    setSyncStatus(r.hasData
+      ? '連線成功。雲端已有資料（'+new Date(r.savedAt).toLocaleString('zh-HK')+'）'
+      : '連線成功。雲端暫時未有資料，可按「上傳」','ok');
+  }catch(err){ setSyncStatus('連線失敗：'+errText(err),'err'); }
+}
+
+async function pushToDrive(opts){
+  opts = opts || {};
+  if(!syncConfigured()){ if(!opts.silent) setSyncStatus('請先填寫正確的 Apps Script 網址及密碼','warn'); return false; }
+  if(syncBusy) return false;
+  syncBusy = true;
+  setSyncStatus('上傳中…','busy');
+  try{
+    const cfg = getSyncCfg();
+    const r = await gas('push', {data, baseSavedAt:cfg.lastSavedAt, force:!!opts.force});
+    if(r.ok){
+      setSyncCfg({lastSavedAt:r.savedAt, lastSyncTime:Date.now()});
+      pendingPush = false;
+      setSyncStatus('已上傳到 Google Drive（'+timeLabel(Date.now())+'）','ok');
+      return true;
+    }
+    if(r.error==='conflict'){
+      syncBusy = false;
+      if(opts.silent){
+        setSyncStatus('雲端有另一個較新的版本，已暫停自動上傳。請到設定按「下載」或手動「上傳」處理','warn');
+        return false;
+      }
+      const when = r.savedAt ? new Date(r.savedAt).toLocaleString('zh-HK') : '';
+      if(confirm('雲端已有另一個版本（'+when+'），可能來自其他裝置。\n\n按「確定」＝ 用這部裝置的資料覆蓋雲端（雲端舊版會自動留作備份）\n按「取消」＝ 不上傳；你可以改按「下載」取回雲端版本')){
+        return pushToDrive({force:true});
+      }
+      setSyncStatus('已取消上傳','warn');
+      return false;
+    }
+    throw new Error(r.error||'未知錯誤');
+  }catch(err){
+    if(getSyncCfg().auto) pendingPush = true;
+    setSyncStatus('上傳失敗：'+errText(err)+(getSyncCfg().auto?'（恢復連線後會自動再試）':''),'err');
+    return false;
+  }finally{ syncBusy = false; }
+}
+
+async function pullFromDrive(){
+  if(!syncConfigured()){ setSyncStatus('請先填寫正確的 Apps Script 網址及密碼','warn'); return; }
+  if(syncBusy) return;
+  syncBusy = true;
+  setSyncStatus('下載中…','busy');
+  try{
+    const r = await gas('pull');
+    if(!r.ok) throw new Error(r.error||'未知錯誤');
+    if(!r.data){ setSyncStatus('雲端暫時未有資料，請先在有資料的裝置按「上傳」','warn'); return; }
+    const inc = r.data;
+    if(!Array.isArray(inc.deposits) || !Array.isArray(inc.banks) || !Array.isArray(inc.currencies)){
+      throw new Error('雲端資料格式不正確');
+    }
+    const when = new Date(r.savedAt).toLocaleString('zh-HK');
+    if(!confirm('會用雲端版本（'+when+'）取代這部裝置現有的全部資料。\n確定下載？')){
+      setSyncStatus('已取消下載','warn'); return;
+    }
+    data = inc; ensureData();
+    if(!data.rangeMode) data.rangeMode = 'calendar';
+    save(data); // 直接存，不觸發自動上傳
+    setSyncCfg({lastSavedAt:r.savedAt, lastSyncTime:Date.now()});
+    renderSettings(); renderAll();
+    if(incomeView.style.display==='block') renderIncome();
+    setSyncStatus('已從 Google Drive 下載（'+timeLabel(Date.now())+'）','ok');
+  }catch(err){
+    setSyncStatus('下載失敗：'+errText(err),'err');
+  }finally{ syncBusy = false; }
+}
+
+function scheduleAutoPush(){
+  const cfg = getSyncCfg();
+  if(!cfg.auto || !syncConfigured()) return;
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(()=>pushToDrive({silent:true}), 3000);
+}
+
+function loadSyncUi(){
+  const c = getSyncCfg();
+  document.getElementById('syncUrl').value = c.url;
+  document.getElementById('syncToken').value = c.token;
+  document.getElementById('syncAuto').checked = !!c.auto;
+  if(!syncConfigured()) setSyncStatus('尚未設定同步。填好網址及密碼後，先按「測試連線」','');
+  else if(c.lastSyncTime) setSyncStatus('上次同步：'+new Date(c.lastSyncTime).toLocaleString('zh-HK'),'ok');
+  else setSyncStatus('已設定。可按「測試連線」或「上傳」','');
+}
+
+document.getElementById('settingsBtn').addEventListener('click', loadSyncUi);
+document.getElementById('syncUrl').addEventListener('change',e=>{
+  const url = e.target.value.trim();
+  // 換了網址等於換了另一個雲端，要重新對齊版本
+  if(url !== getSyncCfg().url) setSyncCfg({url, lastSavedAt:null, lastSyncTime:null});
+  loadSyncUi();
+});
+document.getElementById('syncToken').addEventListener('change',e=>{
+  setSyncCfg({token:e.target.value.trim()}); loadSyncUi();
+});
+document.getElementById('syncAuto').addEventListener('change',e=>{
+  setSyncCfg({auto:e.target.checked});
+  if(e.target.checked && !syncConfigured()){
+    e.target.checked = false; setSyncCfg({auto:false});
+    setSyncStatus('請先填寫網址及密碼，再開啟自動上傳','warn');
+  }
+});
+document.getElementById('syncTestBtn').addEventListener('click', testSync);
+document.getElementById('syncPushBtn').addEventListener('click', ()=>pushToDrive({}));
+document.getElementById('syncPullBtn').addEventListener('click', pullFromDrive);
+window.addEventListener('online',()=>{ if(pendingPush){ pendingPush=false; pushToDrive({silent:true}); } });
+if(syncConfigured()){
+  const c = getSyncCfg();
+  if(c.lastSyncTime) document.getElementById('syncBadge').textContent = ' · ☁ 上次同步 '+timeLabel(c.lastSyncTime);
+}
+
+// ---------- PWA：離線快取 ----------
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
